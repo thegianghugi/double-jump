@@ -111,6 +111,7 @@ function update(dt){
   if(state!=='play'){stepParts(dt);return;}
   let dir=(right?1:0)-(left?1:0);
   if(!dir&&Math.abs(tilt)>6)dir=Math.max(-1,Math.min(1,tilt/22));
+  if(touchDir)dir=touchDir;
   P.vx+=(dir*SPEED-P.vx)*Math.min(1,dt*14);
   if(dir)P.dir=dir;
   const py=P.y+P.h;
@@ -420,12 +421,13 @@ function draw(){
   if(state==='start'){
     panel();ctx.save();ctx.translate(0,(H-560)/2);
     txt('DOUBLE JUMP',W/2,200,38,'#e0703a');
-    txt('bản 11 · thêm kỹ năng cho lượt vé',W/2,222,12,'#d89a00');
+    txt('bản 12 · vuốt ngón tay để nhảy / chuyển hướng',W/2,222,12,'#d89a00');
     txt('Leo càng cao càng tốt',W/2,252,16,INK);
     txt('NGHIÊNG máy: đi trái / phải',W/2,296,16,'#7a5a44');
     txt('Tự động nảy khi chạm bệ đỡ',W/2,322,16,'#7a5a44');
     txt('LẮC máy giữa không trung = NHẢY ĐÔI',W/2,348,16,'#3b9b6b');
-    txt('Bệ nâu vỡ • Lò xo • Mũ chong chóng',W/2,386,14,'#d89a00');
+    txt('Hoặc: VUỐT LÊN = nhảy đôi • KÉO NGANG = đi',W/2,368,13,'#3b9b6b');
+    txt('Bệ nâu vỡ • Lò xo • Mũ chong chóng',W/2,390,14,'#d89a00');
     txt('Né MÂY ĐEN ⚡ chạm là bị giật!',W/2,410,14,'#d9453b');
     txt('Mây → Mặt Trăng → Sao Hỏa → Sao Thổ',W/2,434,13,'#8a6a54');
     txt(gameMode==='ticket'?'Có vé: 🚀 Tên lửa + 🛡️ Khiên (mỗi cái 1 lần)':'Lượt free: kỹ năng 🚀 🛡️ bị khóa 🔒',W/2,462,13,gameMode==='ticket'?'#3b9b6b':'#8a6a54');
@@ -477,15 +479,32 @@ function bind(id,down,up){
 bind('l',()=>left=true,()=>left=false);
 bind('r',()=>right=true,()=>right=false);
 bind('j',()=>jump(),()=>{});
+let touchDir=0,g=null;
+function cvXY(e){const r=cv.getBoundingClientRect();return [(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H];}
 cv.addEventListener('pointerdown',e=>{
   if(state!=='play'){jump();return;}
   if(paused){paused=false;return;}
-  const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
+  const [x,y]=cvXY(e);
   const hit=SKB.find(b=>Math.hypot(x-b.x,y-(H-44))<36);
-  if(hit)useSkill(hit.k);
-  else if(x>W-60&&y<60)paused=true;
-  else if(ctrlHidden)jump();
+  if(hit){useSkill(hit.k);return;}
+  if(x>W-60&&y<60){paused=true;return;}
+  try{cv.setPointerCapture(e.pointerId);}catch(_){}
+  g={id:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,jumped:false};
 });
+cv.addEventListener('pointermove',e=>{
+  if(!g||e.pointerId!==g.id)return;
+  const k=360/cv.getBoundingClientRect().width;
+  const dx=(e.clientX-g.x0)*k,dy=(e.clientY-g.y0)*k;
+  if(Math.abs(dx)>10||Math.abs(dy)>10)g.moved=true;
+  if(Math.abs(dx)>8&&Math.abs(dx)>=Math.abs(dy)*0.6)touchDir=Math.max(-1,Math.min(1,dx/45));
+  if(!g.jumped&&dy<-45&&Math.abs(dy)>Math.abs(dx)){g.jumped=true;jump();}
+});
+function gEnd(e){
+  if(!g||e.pointerId!==g.id)return;
+  if(!g.moved&&ctrlHidden)jump();
+  g=null;touchDir=0;
+}
+cv.addEventListener('pointerup',gEnd);cv.addEventListener('pointercancel',gEnd);
 let pa=null;
 function onMotion(e){
   evCount++;sensorOn=true;
