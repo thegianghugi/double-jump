@@ -42,20 +42,22 @@ function reset(){
 }
 function genTo(limit){
   while(topY>limit){
-    topY-=80+Math.random()*100;
-    const w=70+Math.random()*60;
+    const m0=-topY/10,d=Math.min(1,m0/400);
+    const gap=(55+d*30)+Math.random()*((95+d*95)-(55+d*30));
+    topY-=gap;
+    const w=(110-d*40)+Math.random()*(50+d*10);
     const m=-topY/10,r=Math.random();
-    const pb=Math.min(.22,(m-40)/900),pm=Math.min(.25,(m-25)/700);
+    const pb=Math.min(.22,(m-80)/900),pm=Math.min(.25,(m-60)/700);
     let type='n';
-    if(m>40&&r<pb&&lastType!=='b')type='b';
-    else if(m>25&&r>=pb&&r<pb+pm)type='m';
+    if(m>80&&r<pb&&lastType!=='b')type='b';
+    else if(m>60&&r>=pb&&r<pb+pm)type='m';
     lastType=type;
     const p={x:Math.random()*(W-w),y:topY,w,h:12,type,vx:type==='m'?(Math.random()<.5?-1:1)*(45+Math.random()*45):0,spring:false,item:false};
     if(type==='n'&&Math.random()<.14){p.spring=true;p.so=6+Math.random()*(w-30);}
     else if(type!=='b'&&m>30&&Math.random()<.05)p.item=true;
     p.stars=[];
     {
-      const rate=gameMode==='ticket'?.85:1.2;
+      const rate=(gameMode==='ticket'?.85:1.2)*gap/130;
       const n=Math.floor(rate)+(Math.random()<rate%1?1:0);
       for(let i=0;i<n&&starsLeft>0;i++){
         starsLeft--;
