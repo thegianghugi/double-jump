@@ -30,7 +30,7 @@ canvas{height:100%;max-width:100%;aspect-ratio:360/560;background:#fdf6ec;border
 </div>
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
-const W=360,H=560,G=1152,JV=640,SPEED=200;
+const W=360,H=560,G=700,JV=430,SPEED=260;
 let best=0;try{best=+localStorage.getItem('dj_best')||0}catch(e){}
 let gameMode='ticket',starsLeft=0,starVal=10,saoMax=0,saoGot=0,pops=[],lastType='n',tilt=0,sensorOn=false,sensorMsg='',lastShake=0,evCount=0;
 let state='start',P,plats,parts,camY,topY,score,left=false,right=false,t=0,shake=0,haz=[],lastHaz=false,zoneIdx=0,bannerT=0;
@@ -48,17 +48,19 @@ function reset(){
 }
 function genTo(limit){
   while(topY>limit){
-    const m0=-topY/10,d=Math.min(1,m0/700);
-    const gap=(50+d*25)+Math.random()*((85+d*60)-(50+d*25));
+    const m0=-topY/10,d=Math.min(1,m0/600);
+    const thin=1+0.3*Math.max(0,Math.min(1,(m0-150)/100));
+    const gap=Math.min(100,((30+d*20)+Math.random()*((55+d*40)-(30+d*20)))*thin);
     topY-=gap;
-    const w=(125-d*35)+Math.random()*(50+d*10);
-    const m=-topY/10,r=Math.random();
-    const pb=Math.min(.15,(m-150)/1200),pm=Math.min(.18,(m-120)/1000);
+    const w=(80-d*20)+Math.random()*30;
+    const m=-topY/10,r=Math.random(),zz=zoneOf(m);
+    const pb=m>150?Math.min(.15,(m-150)/1200):0,pm=m>100?[0,.06,.10,.18,.40,.55][zz]:0;
     let type='n';
-    if(m>150&&r<pb&&lastType!=='b')type='b';
-    else if(m>120&&r>=pb&&r<pb+pm)type='m';
+    if(r<pb&&lastType!=='b')type='b';
+    else if(r>=pb&&r<pb+pm)type='m';
     lastType=type;
-    const p={z:zoneOf(m),seed:Math.random()*1000,x:Math.random()*(W-w),y:topY,w,h:12,type,vx:type==='m'?(Math.random()<.5?-1:1)*(36+Math.random()*36):0,spring:false,item:false};
+    const msp=(30+zz*12)+Math.random()*(25+zz*10);
+    const p={z:zz,seed:Math.random()*1000,x:Math.random()*(W-w),y:topY,w,h:12,type,vx:type==='m'?(Math.random()<.5?-1:1)*msp:0,spring:false,item:false};
     if(type==='n'&&Math.random()<.14){p.spring=true;p.so=6+Math.random()*(w-30);}
     else if(type!=='b'&&m>30&&Math.random()<.05)p.item=true;
     p.stars=[];
@@ -67,7 +69,7 @@ function genTo(limit){
       const n=Math.floor(rate)+(Math.random()<rate%1?1:0);
       for(let i=0;i<n&&starsLeft>0;i++){
         starsLeft--;
-        p.stars.push({ox:Math.random()*p.w,oy:-(28+Math.random()*(Math.random()<.35?150:40)),got:false});
+        p.stars.push({ox:Math.random()*p.w,oy:-(28+Math.random()*(Math.random()<.35?95:40)),got:false});
       }
     }
     if(m>180&&!lastHaz&&Math.random()<Math.min(.12,.03+(m-180)/3000)){
@@ -92,10 +94,10 @@ function update(dt){
   P.vx+=(dir*SPEED-P.vx)*Math.min(1,dt*14);
   if(dir)P.dir=dir;
   const py=P.y+P.h;
-  if(P.prop>0){P.prop-=dt;P.vy=-345;}else P.vy+=G*dt;
+  if(P.prop>0){P.prop-=dt;P.vy=-235;}else P.vy+=G*dt;
   for(const p of plats){
     if(p.type==='m'){p.x+=p.vx*dt;if(p.x<0){p.x=0;p.vx=-p.vx;}if(p.x+p.w>W){p.x=W-p.w;p.vx=-p.vx;}}
-    if(p.broken){p.fv+=G*0.6*dt;p.y+=p.fv*dt;}
+    if(p.broken){p.fv+=900*dt;p.y+=p.fv*dt;}
     if(p.item&&!p.taken&&P.prop<=0){
       const ix=p.x+p.w/2,iy=p.y-22;
       if(Math.abs(P.x+P.w/2-ix)<24&&Math.abs(P.y+P.h/2-iy)<28){
@@ -109,7 +111,7 @@ function update(dt){
   if(P.shock<=0&&P.inv<=0&&P.prop<=0){
     for(const h of haz){
       if(P.x+P.w>h.x+6&&P.x<h.x+h.w-6&&P.y+P.h>h.y+6&&P.y<h.y+h.h-4){
-        P.shock=1.5;P.jl=0;if(P.vy<200)P.vy=200;shake=8;
+        P.shock=1.5;P.jl=0;if(P.vy<130)P.vy=130;shake=8;
         for(let i=0;i<14;i++){const a=i/14*Math.PI*2;parts.push({x:P.x+P.w/2,y:P.y+P.h/2,vx:Math.cos(a)*150,vy:Math.sin(a)*150,l:0.4,c:'#ffe94a'});}
         break;
       }
@@ -185,9 +187,9 @@ function doodleStar(cx,cy,r,spark){
   ol('#ffd23f',2.2,()=>{for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?r*.52:r;ctx.lineTo(cx+Math.cos(a)*q,cy+Math.sin(a)*q);}ctx.closePath();});
 }
 const ROCKC=['#e6e2d8','#f0a078','#f3d896','#a8938a'];
-function cloudPlat(x,y,w,seed){
-  const n=Math.max(2,Math.floor(w/38));
-  ol('#fffdf8',2.8,()=>{rrp(x,y-1,w,15,7);for(let i=0;i<n;i++){cp(x+(i+.5)*w/n+(hs(seed+i)-.5)*6,y+5,6.5+hs(seed+i*2)*1.8);}});
+function cloudPlat(x,y,w,seed,fill){
+  const n=Math.max(2,Math.floor(w/32));
+  ol(fill||'#fffdf8',2.8,()=>{rrp(x,y-1,w,15,7);for(let i=0;i<n;i++){cp(x+(i+.5)*w/n+(hs(seed+i)-.5)*6,y+4,7.5+hs(seed+i*2)*2.5);}});
 }
 function pillPlat(x,y,w,fill,dark){
   ol(fill,2.2,()=>rrp(x,y-1,w,15,7.5));
@@ -223,17 +225,24 @@ function drawGround(y){
   ctx.fillStyle='#d9bf95';ctx.fillRect(280,y-44,6,9);ctx.fillRect(280,y-28,6,9);
   ol('#fffdf8',2.2,()=>{rrp(-20,y+24,W+40,160,0);for(let x=-10;x<W+30;x+=44)cp(x,y+24,23+hs(x)*3);});
 }
+function arrows(x,y,w,col){
+  ctx.fillStyle=col;const cx=x+w/2,cy=y+6;ctx.beginPath();
+  ctx.moveTo(cx-12,cy);ctx.lineTo(cx-6,cy-3.5);ctx.lineTo(cx-6,cy+3.5);
+  ctx.moveTo(cx+12,cy);ctx.lineTo(cx+6,cy-3.5);ctx.lineTo(cx+6,cy+3.5);ctx.fill();
+}
 function drawPlat(p,y){
   if(p.ground){drawGround(y);return;}
   const z=p.z||0,x=p.x,w=p.w;
   if(z<2){
-    if(p.type==='m')pillPlat(x,y,w,'#c6e27e','#a9cc5c');
-    else if(p.type==='b'){pillPlat(x,y,w,'#eaa862','#dc9650');crack(x,y,w);}
+    if(p.type==='m')cloudPlat(x,y,w,p.seed,'#d6ecff');
+    else if(p.type==='b'){cloudPlat(x,y,w,p.seed,'#ecd2a8');crack(x,y,w);}
     else cloudPlat(x,y,w,p.seed);
+    if(p.type==='m')arrows(x,y,w,'#4aa0ff');
   }else{
-    const f=p.type==='m'?'#c6e27e':p.type==='b'?'#eaa862':ROCKC[z-2];
+    const f=p.type==='b'?'#c98a5a':ROCKC[z-2];
     rockPlat(x,y,w,f,p.seed,z);
     if(p.type==='b')crack(x,y,w);
+    if(p.type==='m')arrows(x,y,w,'rgba(74,44,26,.55)');
   }
 }
 function drawSpring(sx,y){
@@ -383,7 +392,7 @@ function draw(){
   if(state==='start'){
     panel();
     txt('DOUBLE JUMP',W/2,200,38,'#e0703a');
-    txt('bản 6 · chậm hơn nữa',W/2,222,12,'#d89a00');
+    txt('bản 7 · theo Doodle Jump',W/2,222,12,'#d89a00');
     txt('Leo càng cao càng tốt',W/2,252,16,INK);
     txt('NGHIÊNG máy: đi trái / phải',W/2,296,16,'#7a5a44');
     txt('Tự động nảy khi chạm bệ đỡ',W/2,322,16,'#7a5a44');
