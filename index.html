@@ -15,11 +15,12 @@ canvas{height:100%;max-width:100%;aspect-ratio:360/560;background:#1d1745;border
 .b:active,.b.on{background:#6b57ff}
 #j{flex:1.6;background:#ff7a59}
 #j:active{background:#ffa07a}
+#modebtn{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);padding:10px 16px;border:0;border-radius:20px;background:#ffd24a;color:#2a1f6e;font-weight:800;font-size:14px;white-space:nowrap}
 </style>
 </head>
 <body>
 <div id="app">
-  <div id="wrap"><canvas id="c" width="360" height="560"></canvas></div>
+  <div id="wrap"><canvas id="c" width="360" height="560"></canvas><button id="modebtn"></button></div>
   <div id="ctrl">
     <button class="b" id="s" style="flex:1.3;font-size:15px">📳 Bật lắc</button>
     <button class="b" id="l">◀</button>
@@ -31,12 +32,12 @@ canvas{height:100%;max-width:100%;aspect-ratio:360/560;background:#1d1745;border
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 const W=360,H=560,G=1800,JV=800,SPEED=250;
 let best=0;try{best=+localStorage.getItem('dj_best')||0}catch(e){}
-let lastType='n',tilt=0,sensorOn=false,sensorMsg='',lastShake=0,evCount=0;
+let gameMode='ticket',starsLeft=0,starVal=10,saoMax=0,saoGot=0,pops=[],lastType='n',tilt=0,sensorOn=false,sensorMsg='',lastShake=0,evCount=0;
 let state='start',P,plats,parts,camY,topY,score,left=false,right=false,t=0,shake=0;
 
 function reset(){
   P={x:W/2-12,y:-28,w:24,h:28,vx:0,vy:0,jl:1,ground:false,dir:1,sq:0,prop:0};
-  plats=[{x:0,y:0,w:W,h:14,type:'n',vx:0}];lastType='n';parts=[];camY=-H*0.7;topY=0;score=0;
+  plats=[{x:0,y:0,w:W,h:14,type:'n',vx:0,stars:[]}];lastType='n';parts=[];pops=[];saoGot=0;starVal=gameMode==='ticket'?10:1;starsLeft=gameMode==='ticket'?40:55;saoMax=starsLeft*starVal;camY=-H*0.7;topY=0;score=0;
   genTo(camY-300);
 }
 function genTo(limit){
@@ -52,6 +53,15 @@ function genTo(limit){
     const p={x:Math.random()*(W-w),y:topY,w,h:12,type,vx:type==='m'?(Math.random()<.5?-1:1)*(45+Math.random()*45):0,spring:false,item:false};
     if(type==='n'&&Math.random()<.14){p.spring=true;p.so=6+Math.random()*(w-30);}
     else if(type!=='b'&&m>30&&Math.random()<.05)p.item=true;
+    p.stars=[];
+    {
+      const rate=gameMode==='ticket'?.85:1.2;
+      const n=Math.floor(rate)+(Math.random()<rate%1?1:0);
+      for(let i=0;i<n&&starsLeft>0;i++){
+        starsLeft--;
+        p.stars.push({ox:Math.random()*p.w,oy:-(28+Math.random()*(Math.random()<.35?150:40)),got:false});
+      }
+    }
     plats.push(p);
   }
 }
@@ -104,6 +114,17 @@ function update(dt){
       }
     }
   }
+  for(const p of plats){
+    for(const st of p.stars){
+      if(st.got)continue;
+      const sx=p.x+st.ox,sy=p.y+st.oy;
+      if(Math.abs(P.x+P.w/2-sx)<22&&Math.abs(P.y+P.h/2-sy)<24){
+        st.got=true;saoGot+=starVal;
+        pops.push({x:sx,y:sy,t:0.8,txt:'+'+starVal});
+        for(let i=0;i<8;i++){const a=i/8*Math.PI*2;parts.push({x:sx,y:sy,vx:Math.cos(a)*110,vy:Math.sin(a)*110,l:0.35,c:'#ffd24a'});}
+      }
+    }
+  }
   P.sq*=Math.pow(0.001,dt);
   camY=Math.min(camY,P.y-H*0.5);
   genTo(camY-300);
@@ -113,12 +134,19 @@ function update(dt){
   stepParts(dt);
 }
 function stepParts(dt){
+  for(const q of pops){q.t-=dt;q.y-=40*dt;}
+  pops=pops.filter(q=>q.t>0);
   for(const q of parts){q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;}
   parts=parts.filter(q=>q.l>0);
   shake*=Math.pow(0.0005,dt);
 }
 function txt(s,x,y,size,col,al){ctx.font='800 '+size+'px system-ui,sans-serif';ctx.textAlign=al||'center';ctx.fillStyle=col||'#fff';ctx.fillText(s,x,y);}
 function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawStar(cx,cy,r){
+  ctx.beginPath();
+  for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr2=i%2?r*.45:r;ctx.lineTo(cx+Math.cos(a)*rr2,cy+Math.sin(a)*rr2);}
+  ctx.closePath();ctx.fill();
+}
 function draw(){
   ctx.save();
   ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
@@ -146,6 +174,12 @@ function draw(){
       ctx.moveTo(sx+3,y-4);ctx.lineTo(sx+17,y-8);ctx.moveTo(sx+17,y-8);ctx.lineTo(sx+3,y-12);ctx.stroke();
       ctx.fillStyle='#ff4d5e';ctx.fillRect(sx,y-15,20,4);
     }
+    for(const st of p.stars){
+      if(st.got)continue;
+      const sx=p.x+st.ox,sy=y+st.oy+Math.sin(t*4+st.ox)*2;
+      ctx.fillStyle='rgba(255,210,74,.25)';ctx.beginPath();ctx.arc(sx,sy,15,0,7);ctx.fill();
+      ctx.fillStyle='#ffd24a';drawStar(sx,sy,11);
+    }
     if(p.item&&!p.taken){
       const ix=p.x+p.w/2,iy=y-22+Math.sin(t*5)*2;
       ctx.fillStyle='#ffd24a';ctx.beginPath();ctx.arc(ix,iy,9,Math.PI,0);ctx.fill();
@@ -155,6 +189,8 @@ function draw(){
     }
   }
   for(const q of parts){ctx.globalAlpha=Math.max(0,q.l*2);ctx.fillStyle=q.c;ctx.fillRect(q.x-2,q.y-camY-2,4,4);}
+  ctx.globalAlpha=1;
+  for(const q of pops){ctx.globalAlpha=Math.min(1,q.t*2);txt(q.txt,q.x,q.y-camY,18,'#ffd24a');}
   ctx.globalAlpha=1;
   if(P){
     const sq=P.sq,w=P.w*(1+sq*0.5),h=P.h*(1-sq*0.5);
@@ -179,8 +215,9 @@ function draw(){
   ctx.restore();
   txt(score+' m',16,38,28,'#fff','left');
   txt('Kỷ lục '+best,W-16,36,15,'#b8aef5','right');
-  if(P&&P.prop>0){ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(16,66,100,6);ctx.fillStyle='#ffd24a';ctx.fillRect(16,66,100*P.prop/2.4,6);}
-  if(sensorMsg)txt(sensorMsg,16,58,12,sensorOn?'#7fffe0':'#ffb36b','left');
+  ctx.fillStyle='#ffd24a';drawStar(24,56,8);txt(saoGot+' / '+saoMax+' Sao',38,62,16,'#ffd24a','left');
+  if(P&&P.prop>0){ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(16,74,100,6);ctx.fillStyle='#ffd24a';ctx.fillRect(16,74,100*P.prop/2.4,6);}
+  if(sensorMsg)txt(sensorMsg,16,96,12,sensorOn?'#7fffe0':'#ffb36b','left');
   if(state==='start'){
     ctx.fillStyle='rgba(10,8,30,.7)';ctx.fillRect(0,0,W,H);
     txt('DOUBLE JUMP',W/2,200,38,'#7fffe0');
@@ -197,11 +234,16 @@ function draw(){
     txt('RỚT RỒI!',W/2,220,40,'#ff7a59');
     txt(score+' m',W/2,275,34,'#fff');
     txt(score>=best&&score>0?'Kỷ lục mới!':'Kỷ lục '+best,W/2,310,17,'#7fffe0');
+    txt('⭐ '+saoGot+' / '+saoMax+' Sao',W/2,352,22,'#ffd24a');
     txt('Chạm NHẢY ĐÔI để chơi lại',W/2,400,20,'#ff9d80');
   }
 }
 let last=performance.now();
-function loop(n){const dt=Math.min(0.033,(n-last)/1000);last=n;update(dt);draw();requestAnimationFrame(loop);}
+const modeBtn=document.getElementById('modebtn');
+function modeText(){modeBtn.textContent=gameMode==='ticket'?'Lượt vé · tối đa 400 Sao (bấm để đổi)':'Lượt free · tối đa 55 Sao (bấm để đổi)';}
+modeBtn.addEventListener('click',()=>{if(state==='play')return;gameMode=gameMode==='ticket'?'free':'ticket';reset();modeText();});
+modeText();
+function loop(n){const dt=Math.min(0.033,(n-last)/1000);last=n;modeBtn.style.display=state==='play'?'none':'block';update(dt);draw();requestAnimationFrame(loop);}
 addEventListener('keydown',e=>{
   if(e.repeat)return;
   if(e.key==='ArrowLeft'||e.key==='a')left=true;
