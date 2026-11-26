@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Game Double Jump</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;background:#14102b;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none}
+#app{display:flex;flex-direction:column;height:100dvh;align-items:center}
+#wrap{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:center;position:relative}
+canvas{height:100%;max-width:100%;aspect-ratio:360/560;background:#1d1745;border-radius:12px}
+#ctrl{display:flex;gap:10px;width:100%;max-width:420px;padding:8px 12px 14px}
+.b{flex:1;height:64px;border-radius:16px;border:0;background:#3a2f7a;color:#fff;font-size:26px;font-weight:700;touch-action:none}
+.b:active,.b.on{background:#6b57ff}
+#j{flex:1.6;background:#ff7a59}
+#j:active{background:#ffa07a}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="wrap"><canvas id="c" width="360" height="560"></canvas></div>
+  <div id="ctrl">
+    <button class="b" id="s" style="flex:1.3;font-size:15px">📳 Bật lắc</button>
+    <button class="b" id="l">◀</button>
+    <button class="b" id="r">▶</button>
+    <button class="b" id="j">NHẢY ĐÔI</button>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const W=360,H=560,G=1800,JV=800,SPEED=250;
+let best=0;try{best=+localStorage.getItem('dj_best')||0}catch(e){}
+let tilt=0,sensorOn=false,sensorMsg='',lastShake=0,evCount=0;
+let state='start',P,plats,parts,camY,topY,score,left=false,right=false,t=0,shake=0;
+
+function reset(){
+  P={x:W/2-12,y:-28,w:24,h:28,vx:0,vy:0,jl:1,ground:false,dir:1,sq:0};
+  plats=[{x:0,y:0,w:W,h:14}];parts=[];camY=-H*0.7;topY=0;score=0;
+  genTo(camY-300);
+}
+function genTo(limit){
+  while(topY>limit){
+    topY-=80+Math.random()*100;
+    const w=70+Math.random()*60;
+    plats.push({x:Math.random()*(W-w),y:topY,w,h:12});
+  }
+}
+function jump(){
+  if(state!=='play'){ if(state!=='go'||t>0.4){reset();state='play';t=0;} return; }
+  if(P.jl<=0)return;
+  P.vy=-JV;P.jl--;P.sq=-0.35;shake=4;
+  for(let i=0;i<16;i++){const a=i/16*Math.PI*2;parts.push({x:P.x+P.w/2,y:P.y+P.h,vx:Math.cos(a)*140,vy:Math.sin(a)*60+40,l:0.5,c:'#7fffe0'});}
+}
+function update(dt){
+  t+=dt;
+  if(state!=='play'){stepParts(dt);return;}
+  let dir=(right?1:0)-(left?1:0);
+  if(!dir&&Math.abs(tilt)>6)dir=Math.max(-1,Math.min(1,tilt/22));
+  P.vx+=(dir*SPEED-P.vx)*Math.min(1,dt*14);
+  if(dir)P.dir=dir;
+  const py=P.y+P.h;
+  P.vy+=G*dt;
+  P.x+=P.vx*dt;P.y+=P.vy*dt;
+  if(P.x<-P.w)P.x=W;if(P.x>W)P.x=-P.w;
+  if(P.vy>=0){
+    for(const p of plats){
+      if(P.x+P.w>p.x&&P.x<p.x+p.w&&py<=p.y+2&&P.y+P.h>=p.y){
+        P.y=p.y-P.h;P.vy=-JV;P.jl=1;P.sq=0.3;
+        for(let i=0;i<5;i++)parts.push({x:P.x+P.w/2,y:p.y,vx:(Math.random()-.5)*140,vy:-Math.random()*60,l:0.3,c:'#fff'});
+        break;
+      }
+    }
+  }
+  P.sq*=Math.pow(0.001,dt);
+  camY=Math.min(camY,P.y-H*0.5);
+  genTo(camY-300);
+  plats=plats.filter(p=>p.y<camY+H+50);
+  score=Math.max(score,Math.floor(-P.y/10));
+  if(P.y-camY>H){state='go';t=0;shake=8;if(score>best){best=score;try{localStorage.setItem('dj_best',best)}catch(e){}}}
+  stepParts(dt);
+}
+function stepParts(dt){
+  for(const q of parts){q.x+=q.vx*dt;q.y+=q.vy*dt;q.l-=dt;}
+  parts=parts.filter(q=>q.l>0);
+  shake*=Math.pow(0.0005,dt);
+}
+function txt(s,x,y,size,col,al){ctx.font='800 '+size+'px system-ui,sans-serif';ctx.textAlign=al||'center';ctx.fillStyle=col||'#fff';ctx.fillText(s,x,y);}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function draw(){
+  ctx.save();
+  ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#2a1f6e');g.addColorStop(1,'#14102b');
+  ctx.fillStyle=g;ctx.fillRect(-10,-10,W+20,H+20);
+  ctx.fillStyle='rgba(255,255,255,.5)';
+  for(let i=0;i<30;i++){const x=(i*97)%W;const y=((i*181-camY*0.2)%H+H)%H;ctx.fillRect(x,y,2,2);}
+  for(const p of plats){
+    const y=p.y-camY;
+    ctx.fillStyle='#6b57ff';rr(p.x,y,p.w,p.h,6);ctx.fill();
+    ctx.fillStyle='#9d8fff';rr(p.x,y,p.w,4,3);ctx.fill();
+  }
+  for(const q of parts){ctx.globalAlpha=Math.max(0,q.l*2);ctx.fillStyle=q.c;ctx.fillRect(q.x-2,q.y-camY-2,4,4);}
+  ctx.globalAlpha=1;
+  if(P){
+    const sq=P.sq,w=P.w*(1+sq*0.5),h=P.h*(1-sq*0.5);
+    const x=P.x-(w-P.w)/2,y=P.y-camY+(P.h-h);
+    ctx.fillStyle=P.jl===0?'#ffb36b':'#ff7a59';rr(x,y,w,h,8);ctx.fill();
+    ctx.fillStyle='#fff';
+    const ex=P.dir>0?x+w*0.55:x+w*0.15;
+    ctx.fillRect(ex,y+h*0.25,5,7);ctx.fillRect(ex+9,y+h*0.25,5,7);
+    ctx.fillStyle='#14102b';
+    const o=P.dir>0?2:0;
+    ctx.fillRect(ex+o,y+h*0.25+2,3,4);ctx.fillRect(ex+9+o,y+h*0.25+2,3,4);
+    ctx.beginPath();ctx.arc(P.x+P.w/2,P.y-camY-10,4.5,0,7);
+    ctx.fillStyle=P.jl>0?'#7fffe0':'rgba(255,255,255,.2)';ctx.fill();
+  }
+  ctx.restore();
+  txt(score+' m',16,38,28,'#fff','left');
+  txt('Kỷ lục '+best,W-16,36,15,'#b8aef5','right');
+  if(sensorMsg)txt(sensorMsg,16,58,12,sensorOn?'#7fffe0':'#ffb36b','left');
+  if(state==='start'){
+    ctx.fillStyle='rgba(10,8,30,.7)';ctx.fillRect(0,0,W,H);
+    txt('DOUBLE JUMP',W/2,200,38,'#7fffe0');
+    txt('Leo càng cao càng tốt',W/2,240,16,'#fff');
+    txt('NGHIÊNG máy: đi trái / phải',W/2,290,16,'#cfc8ff');
+    txt('Tự động nảy khi chạm bệ đỡ',W/2,318,16,'#cfc8ff');
+    txt('LẮC máy giữa không trung:',W/2,346,16,'#cfc8ff');
+    txt('NHẢY ĐÔI (vòng sóng xanh)',W/2,370,16,'#7fffe0');
+    txt('Bật lắc rồi chạm NHẢY ĐÔI',W/2,440,18,'#ff9d80');
+  }
+  if(state==='go'){
+    ctx.fillStyle='rgba(10,8,30,.7)';ctx.fillRect(0,0,W,H);
+    txt('RỚT RỒI!',W/2,220,40,'#ff7a59');
+    txt(score+' m',W/2,275,34,'#fff');
+    txt(score>=best&&score>0?'Kỷ lục mới!':'Kỷ lục '+best,W/2,310,17,'#7fffe0');
+    txt('Chạm NHẢY ĐÔI để chơi lại',W/2,400,20,'#ff9d80');
+  }
+}
+let last=performance.now();
+function loop(n){const dt=Math.min(0.033,(n-last)/1000);last=n;update(dt);draw();requestAnimationFrame(loop);}
+addEventListener('keydown',e=>{
+  if(e.repeat)return;
+  if(e.key==='ArrowLeft'||e.key==='a')left=true;
+  if(e.key==='ArrowRight'||e.key==='d')right=true;
+  if(e.key===' '||e.key==='ArrowUp'||e.key==='w'){jump();e.preventDefault();}
+});
+addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')left=false;
+  if(e.key==='ArrowRight'||e.key==='d')right=false;
+});
+function bind(id,down,up){
+  const b=document.getElementById(id);
+  b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);b.classList.add('on');down();});
+  const u=()=>{b.classList.remove('on');up();};
+  b.addEventListener('pointerup',u);b.addEventListener('pointercancel',u);
+}
+bind('l',()=>left=true,()=>left=false);
+bind('r',()=>right=true,()=>right=false);
+bind('j',()=>jump(),()=>{});
+cv.addEventListener('pointerdown',()=>{if(state!=='play')jump();});
+function onMotion(e){
+  evCount++;sensorOn=true;
+  const a=e.accelerationIncludingGravity;if(!a)return;
+  const m=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
+  const now=performance.now();
+  if(Math.abs(m-9.8)>13&&now-lastShake>230){lastShake=now;jump();}
+}
+function onOrient(e){evCount++;sensorOn=true;if(e.gamma!=null)tilt=e.gamma;}
+async function enableSensors(){
+  try{
+    if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
+      const r=await DeviceMotionEvent.requestPermission();
+      if(r!=='granted'){sensorMsg='Cảm biến bị từ chối';return;}
+      if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission)await DeviceOrientationEvent.requestPermission();
+    }
+    addEventListener('devicemotion',onMotion);
+    addEventListener('deviceorientation',onOrient);
+    sensorMsg='Đang chờ cảm biến... lắc thử đi';
+    setTimeout(()=>{if(!evCount)sensorMsg='Không nhận được cảm biến (dùng nút)';},2000);
+  }catch(err){sensorMsg='Không bật được cảm biến (dùng nút)';}
+}
+document.getElementById('s').addEventListener('click',enableSensors);
+setInterval(()=>{if(evCount&&sensorMsg.indexOf('chờ')>=0)sensorMsg='Cảm biến đang bật';},500);
+reset();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
