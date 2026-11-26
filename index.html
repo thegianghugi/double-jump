@@ -229,7 +229,7 @@ function draw(){
     txt('LẮC máy giữa không trung:',W/2,346,16,'#cfc8ff');
     txt('NHẢY ĐÔI (vòng sóng xanh)',W/2,370,16,'#7fffe0');
     txt('Bệ nâu vỡ • Lò xo • Mũ chong chóng',W/2,404,14,'#ffd24a');
-    txt('Bật lắc rồi chạm NHẢY ĐÔI',W/2,460,18,'#ff9d80');
+    txt('Chạm NHẢY ĐÔI để bắt đầu',W/2,460,18,'#ff9d80');
   }
   if(state==='go'){
     ctx.fillStyle='rgba(10,8,30,.7)';ctx.fillRect(0,0,W,H);
@@ -278,20 +278,26 @@ function onMotion(e){
   if(d>5&&now-lastShake>160){lastShake=now;jump();}
 }
 function onOrient(e){evCount++;sensorOn=true;if(e.gamma!=null)tilt=e.gamma;}
-async function enableSensors(){
+let sensorBusy=false,sensorDone=false,sensorListening=false;
+async function enableSensors(force){
+  if(sensorBusy||(sensorDone&&!force))return;
+  sensorBusy=true;
   try{
     if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
       const r=await DeviceMotionEvent.requestPermission();
-      if(r!=='granted'){sensorMsg='Cảm biến bị từ chối';return;}
+      if(r!=='granted'){sensorMsg='Cảm biến bị từ chối';sensorDone=true;sensorBusy=false;return;}
       if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission)await DeviceOrientationEvent.requestPermission();
     }
-    addEventListener('devicemotion',onMotion);
-    addEventListener('deviceorientation',onOrient);
+    if(!sensorListening){addEventListener('devicemotion',onMotion);addEventListener('deviceorientation',onOrient);sensorListening=true;}
+    sensorDone=true;sensorBusy=false;
     sensorMsg='Đang chờ cảm biến... lắc thử đi';
     setTimeout(()=>{if(!evCount)sensorMsg='Không nhận được cảm biến (dùng nút)';},2000);
-  }catch(err){sensorMsg='Không bật được cảm biến (dùng nút)';}
+  }catch(err){sensorBusy=false;sensorMsg='Không bật được cảm biến (dùng nút)';}
 }
-document.getElementById('s').addEventListener('click',enableSensors);
+document.getElementById('s').addEventListener('click',()=>enableSensors(true));
+const needPerm=typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function';
+if(!needPerm)enableSensors();
+else{const go=()=>enableSensors();document.addEventListener('touchend',go,true);document.addEventListener('click',go,true);}
 setInterval(()=>{if(evCount&&sensorMsg.indexOf('chờ')>=0)sensorMsg='Cảm biến đang bật';},500);
 reset();requestAnimationFrame(loop);
 </script>
