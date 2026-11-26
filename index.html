@@ -30,7 +30,7 @@ canvas{height:100%;max-width:100%;aspect-ratio:360/560;background:#fdf6ec;border
 </div>
 <script>
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
-const W=360,H=560,G=1394,JV=704,SPEED=220;
+const W=360,H=560,G=1152,JV=640,SPEED=200;
 let best=0;try{best=+localStorage.getItem('dj_best')||0}catch(e){}
 let gameMode='ticket',starsLeft=0,starVal=10,saoMax=0,saoGot=0,pops=[],lastType='n',tilt=0,sensorOn=false,sensorMsg='',lastShake=0,evCount=0;
 let state='start',P,plats,parts,camY,topY,score,left=false,right=false,t=0,shake=0,haz=[],lastHaz=false,zoneIdx=0,bannerT=0;
@@ -58,7 +58,7 @@ function genTo(limit){
     if(m>150&&r<pb&&lastType!=='b')type='b';
     else if(m>120&&r>=pb&&r<pb+pm)type='m';
     lastType=type;
-    const p={z:zoneOf(m),seed:Math.random()*1000,x:Math.random()*(W-w),y:topY,w,h:12,type,vx:type==='m'?(Math.random()<.5?-1:1)*(40+Math.random()*40):0,spring:false,item:false};
+    const p={z:zoneOf(m),seed:Math.random()*1000,x:Math.random()*(W-w),y:topY,w,h:12,type,vx:type==='m'?(Math.random()<.5?-1:1)*(36+Math.random()*36):0,spring:false,item:false};
     if(type==='n'&&Math.random()<.14){p.spring=true;p.so=6+Math.random()*(w-30);}
     else if(type!=='b'&&m>30&&Math.random()<.05)p.item=true;
     p.stars=[];
@@ -92,7 +92,7 @@ function update(dt){
   P.vx+=(dir*SPEED-P.vx)*Math.min(1,dt*14);
   if(dir)P.dir=dir;
   const py=P.y+P.h;
-  if(P.prop>0){P.prop-=dt;P.vy=-380;}else P.vy+=G*dt;
+  if(P.prop>0){P.prop-=dt;P.vy=-345;}else P.vy+=G*dt;
   for(const p of plats){
     if(p.type==='m'){p.x+=p.vx*dt;if(p.x<0){p.x=0;p.vx=-p.vx;}if(p.x+p.w>W){p.x=W-p.w;p.vx=-p.vx;}}
     if(p.broken){p.fv+=G*0.6*dt;p.y+=p.fv*dt;}
@@ -109,7 +109,7 @@ function update(dt){
   if(P.shock<=0&&P.inv<=0&&P.prop<=0){
     for(const h of haz){
       if(P.x+P.w>h.x+6&&P.x<h.x+h.w-6&&P.y+P.h>h.y+6&&P.y<h.y+h.h-4){
-        P.shock=1.5;P.jl=0;if(P.vy<220)P.vy=220;shake=8;
+        P.shock=1.5;P.jl=0;if(P.vy<200)P.vy=200;shake=8;
         for(let i=0;i<14;i++){const a=i/14*Math.PI*2;parts.push({x:P.x+P.w/2,y:P.y+P.h/2,vx:Math.cos(a)*150,vy:Math.sin(a)*150,l:0.4,c:'#ffe94a'});}
         break;
       }
@@ -383,7 +383,7 @@ function draw(){
   if(state==='start'){
     panel();
     txt('DOUBLE JUMP',W/2,200,38,'#e0703a');
-    txt('bản 5 · chậm hơn',W/2,222,12,'#d89a00');
+    txt('bản 6 · chậm hơn nữa',W/2,222,12,'#d89a00');
     txt('Leo càng cao càng tốt',W/2,252,16,INK);
     txt('NGHIÊNG máy: đi trái / phải',W/2,296,16,'#7a5a44');
     txt('Tự động nảy khi chạm bệ đỡ',W/2,322,16,'#7a5a44');
