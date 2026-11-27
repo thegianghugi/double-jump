@@ -43,7 +43,7 @@ function mixC(a,b,f){return 'rgb('+Math.round(a[0]+(b[0]-a[0])*f)+','+Math.round
 function skyAt(m){let i=0;while(i<SKY.length-2&&m>=SKY[i+1][0])i++;const a=SKY[i],b=SKY[i+1];const f=Math.max(0,Math.min(1,(m-a[0])/(b[0]-a[0])));return [mixC(a[1],b[1],f),mixC(a[2],b[2],f)];}
 function reset(){
   P={x:W/2-12,y:-28,w:24,h:28,vx:0,vy:0,jl:1,ground:false,dir:1,sq:0,prop:0,shock:0,inv:0,rk:0,sh:0};SK={rk:gameMode==='ticket'?1:0,sh:gameMode==='ticket'?1:0};skMsg=0;
-  plats=[{x:0,y:0,w:W,h:14,type:'n',vx:0,stars:[],z:0,seed:1,ground:true}];lastType='n';parts=[];pops=[];haz=[];lastHaz=false;hazCD=0;livesLeft=DIF.lives;zoneIdx=0;bannerT=0;paused=false;saoGot=0;starVal=gameMode==='ticket'?10:1;starsLeft=gameMode==='ticket'?40:55;saoMax=starsLeft*starVal;camY=-H*0.7;topY=0;score=0;
+  plats=[{x:0,y:0,w:W,h:14,type:'n',vx:0,stars:[],z:0,seed:1,ground:true}];lastType='n';parts=[];pops=[];haz=[];lastHaz=false;hazCD=0;livesLeft=DIF.lives;rescueN=0;lifeGiven=false;zoneIdx=0;bannerT=0;paused=false;saoGot=0;starVal=gameMode==='ticket'?10:1;starsLeft=gameMode==='ticket'?40:55;saoMax=starsLeft*starVal;camY=-H*0.7;topY=0;score=0;
   genTo(camY-300);
 }
 function genTo(limit){
@@ -184,12 +184,13 @@ function update(dt){
   genTo(camY-300);
   plats=plats.filter(p=>p.y<camY+H+50);haz=haz.filter(h=>h.y<camY+H+50);
   score=Math.max(score,Math.floor(-P.y/10));
+  if(!lifeGiven&&score>=SAFE_M){lifeGiven=true;livesLeft+=Math.min(3,Math.floor(rescueN/3));}
   {const zi=zoneOf(score);if(zi>zoneIdx){zoneIdx=zi;bannerT=2.4;}}
   if(P.y-camY>H){
     let save=score<SAFE_M;
     if(!save&&livesLeft>0&&score<1200){livesLeft--;save=true;}
     if(save){
-      rescues++;P.y=camY+H-24;P.vy=-JV*1.25;P.jl=1;P.shock=0;P.inv=0;shake=3;
+      rescues++;if(score<SAFE_M)rescueN++;P.y=camY+H-24;P.vy=-JV*1.25;P.jl=1;P.shock=0;P.inv=0;shake=3;
       for(let i=0;i<18;i++){const a=i/18*Math.PI*2;parts.push({x:P.x+P.w/2,y:camY+H-10,vx:Math.cos(a)*120,vy:-Math.abs(Math.sin(a))*100,l:0.5,c:'#ffffff'});}
     }
   }
@@ -415,7 +416,7 @@ function draw(){
   if(state==='start'){
     panel();ctx.save();ctx.translate(0,(H-560)/2);
     txt('DOUBLE JUMP',W/2,200,38,'#e0703a');
-    txt('bản 21 · dễ hơn, chơi được lâu hơn',W/2,222,12,'#d89a00');
+    txt('bản 22 · tự nới thêm lượt cứu cho người chơi yếu',W/2,222,12,'#d89a00');
     txt('Leo càng cao càng tốt',W/2,252,16,INK);
     txt('NGHIÊNG máy: đi trái / phải',W/2,296,16,'#7a5a44');
     txt('Tự động nảy khi chạm bệ đỡ',W/2,322,16,'#7a5a44');
@@ -474,7 +475,7 @@ bind('l',()=>left=true,()=>left=false);
 bind('r',()=>right=true,()=>right=false);
 bind('j',()=>jump(),()=>{});
 const SHAKE_ON=false;const DIF={safe:600,ps:300,hs:120,ramp:2200,bc:.08,br:3000,mov:[0,.03,.04,.06,.12,.2],ms:.7,hm:.05,hb:.02,hr:10000,hcd:10};
-let SAFE_M=DIF.safe,hazCD=0,livesLeft=0;DIF.lives=3;
+let SAFE_M=DIF.safe,hazCD=0,livesLeft=0,rescueN=0,lifeGiven=false;DIF.lives=3;
 const MK_NEW=[0,150,300,550,800,1100,1300],MK_OLD=[0,120,250,400,550,700,820];
 function mapM(m){if(m<=0)return m;for(let i=0;i<MK_NEW.length-1;i++)if(m<MK_NEW[i+1])return MK_OLD[i]+(m-MK_NEW[i])*(MK_OLD[i+1]-MK_OLD[i])/(MK_NEW[i+1]-MK_NEW[i]);return 820+(m-1300)*0.6;}
 function flyV(rem,T,V){const e=T-rem;let f;if(e<0.35)f=0.45+0.55*e/0.35;else if(rem<0.5)f=0.15+0.85*Math.max(0,rem)/0.5;else f=1;return V*f;}let rescues=0;let touchDir=0,g=null;
