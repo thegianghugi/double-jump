@@ -52,15 +52,11 @@ function genTo(limit){
     const thin=1+0.15*Math.max(0,Math.min(1,(m0-300)/150));
     const gapN=Math.min(100,((24+d*30)+Math.random()*((48+d*50)-(24+d*30)))*thin),wN=(66-d*6)+Math.random()*6;
     const fb=Math.max(0,Math.min(1,(m0-SAFE_M)/100));
-    const gap=gapN*fb+(22+Math.random()*16)*(1-fb);
+    const gap=gapN*fb+(26+Math.random()*20)*(1-fb);
     topY-=gap;
-    const w=wN*fb+(84+Math.random()*14)*(1-fb);
+    const w=wN*fb+(78+Math.random()*12)*(1-fb);
     const m=-topY/10,r=Math.random(),zz=zoneOf(m);
     const pb=m>SAFE_M?Math.min(.15,(m-SAFE_M)/1800):0,pm=m>SAFE_M?[0,.06,.10,.18,.40,.55][zz]:0;
-    if(m<SAFE_M+100&&Math.random()<(m<SAFE_M?1:0.4)){
-      const w2=70+Math.random()*16;
-      plats.push({z:zz,seed:Math.random()*1000,x:Math.random()*(W-w2),y:topY+(Math.random()-.5)*10,w:w2,h:12,type:'n',vx:0,spring:false,item:false,stars:[]});
-    }
     let type='n';
     if(r<pb&&lastType!=='b')type='b';
     else if(r>=pb&&r<pb+pm)type='m';
@@ -106,8 +102,8 @@ function skillBtns(){
     const have=gameMode==='ticket'&&SK[b.k]>0,act=(b.k==='rk'&&P.rk>0)||(b.k==='sh'&&P.sh>0);
     ctx.globalAlpha=have||act?1:0.55;
     ol(act?'#ffe28a':(have?'#fff3b0':'#e4dccd'),2.2,()=>{ctx.moveTo(b.x+27,cy);ctx.arc(b.x,cy,27,0,7);});
-    txt(b.ic,b.x,cy+8,24,INK,'center');
-    txt(gameMode==='ticket'?b.n+(have?'':' (hết)'):'🔒 Cần vé',b.x,cy+42,11,'#7a5a44','center');
+    txt(b.ic,b.x,cy+2,22,INK,'center');
+    txt(gameMode==='ticket'?(have||act?b.n:'Hết'):'🔒 Cần vé',b.x,cy+19,10,'#7a5a44','center');
     ctx.globalAlpha=1;
   }
   if(skMsg>0)txt('Có vé mới mở kỹ năng!',W/2,H-100,14,'#d9453b','center');
@@ -224,15 +220,15 @@ function doodleStar(cx,cy,r,spark){
 const ROCKC=['#e6e2d8','#f0a078','#f3d896','#a8938a'];
 function cloudPlat(x,y,w,seed,fill){
   const n=Math.max(2,Math.floor(w/32));
-  ol(fill||'#fffdf8',2.8,()=>{rrp(x,y-1,w,15,7);for(let i=0;i<n;i++){cp(x+(i+.5)*w/n+(hs(seed+i)-.5)*6,y+4,7.5+hs(seed+i*2)*2.5);}});
+  ol(fill||'#fffdf8',1.5,()=>{rrp(x,y-1,w,15,7);for(let i=0;i<n;i++){cp(x+(i+.5)*w/n+(hs(seed+i)-.5)*6,y+4,7.5+hs(seed+i*2)*2.5);}});
 }
 function pillPlat(x,y,w,fill,dark){
-  ol(fill,2.2,()=>rrp(x,y-1,w,15,7.5));
+  ol(fill,1.5,()=>rrp(x,y-1,w,15,7.5));
   ctx.fillStyle=dark;ctx.beginPath();ctx.ellipse(x+w/2,y+6.5,w*.3,3.2,0,0,7);ctx.fill();
 }
 function rockPlat(x,y,w,fill,seed,z){
   const n=Math.max(2,Math.floor(w/30));
-  ol(fill,2.2,()=>{rrp(x,y-1,w,13,5);for(let i=0;i<n;i++)cp(x+(i+.5)*w/n,y+10,5+hs(seed+i)*3);});
+  ol(fill,1.5,()=>{rrp(x,y-1,w,13,5);for(let i=0;i<n;i++)cp(x+(i+.5)*w/n,y+10,5+hs(seed+i)*3);});
   ctx.strokeStyle='rgba(74,44,26,.55)';ctx.lineWidth=1.6;
   for(let i=0;i<2;i++){ctx.beginPath();ctx.ellipse(x+w*(.2+.6*hs(seed+i*7)),y+5,4,1.8,0,0,7);ctx.stroke();}
   if(z===5){ctx.strokeStyle='#ff9a3c';ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x+8,y+19);ctx.lineTo(x+w-8,y+19);ctx.stroke();}
@@ -433,7 +429,7 @@ function draw(){
   if(state==='start'){
     panel();ctx.save();ctx.translate(0,(H-560)/2);
     txt('DOUBLE JUMP',W/2,200,38,'#e0703a');
-    txt('bản 18 · bay nhanh rồi dừng, vùng không gian dài hơn',W/2,222,12,'#d89a00');
+    txt('bản 19 · xếp bệ gọn như Doodle Jump, viền mảnh',W/2,222,12,'#d89a00');
     txt('Leo càng cao càng tốt',W/2,252,16,INK);
     txt('NGHIÊNG máy: đi trái / phải',W/2,296,16,'#7a5a44');
     txt('Tự động nảy khi chạm bệ đỡ',W/2,322,16,'#7a5a44');
